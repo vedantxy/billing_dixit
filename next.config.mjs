@@ -1,6 +1,8 @@
 const config = {
   poweredByHeader: false,
-  outputFileTracingIncludes: { "/api/**": ["./public/fonts/invoice/*.ttf"] },
+  outputFileTracingIncludes: {
+    "/api/**": ["./public/fonts/invoice/*.ttf", "./public/letterpad.jpg"],
+  },
   async headers() {
     return [
       {

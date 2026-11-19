@@ -23,15 +23,26 @@ async function documentPdf(inv, statement, loadFont) {
   pdf.registerFontkit(fontkit);
   pdf.setTitle(documentId + " — " + business.name);
 
-  // Load official I Shree Enterprise letterpad image
+  // Load official I Shree Enterprise letterpad image (embedded Base64 + filesystem fallback)
   let letterpadImage = null;
   try {
-    const { readFile } = await import("node:fs/promises");
-    const path = await import("node:path");
-    const imgBuf = await readFile(path.join(process.cwd(), "public/letterpad.jpg"));
-    letterpadImage = await pdf.embedJpg(imgBuf);
+    const { LETTERPAD_BASE64 } = await import("./letterpad-data.mjs");
+    if (LETTERPAD_BASE64) {
+      const imgBuf = Buffer.from(LETTERPAD_BASE64, "base64");
+      letterpadImage = await pdf.embedJpg(imgBuf);
+    }
   } catch (err) {
-    // If not found, use vector branding fallback
+    console.error("Letterpad base64 embed error:", err);
+  }
+  if (!letterpadImage) {
+    try {
+      const { readFile } = await import("node:fs/promises");
+      const path = await import("node:path");
+      const imgBuf = await readFile(path.join(process.cwd(), "public/letterpad.jpg"));
+      letterpadImage = await pdf.embedJpg(imgBuf);
+    } catch (err) {
+      console.error("Letterpad file embed fallback error:", err);
+    }
   }
 
   const content = [
@@ -297,7 +308,15 @@ async function documentPdf(inv, statement, loadFont) {
       ? "Invoice attachment · " + statement.month
       : "Statement of Accounts";
     freshPage();
-    if (!letterpadImage) {
+    if (letterpadImage) {
+      const contactInfo = [business.address, business.contact, business.taxId ? "GSTIN: " + business.taxId : ""]
+        .filter(Boolean)
+        .join(" · ");
+      if (contactInfo) {
+        draw(contactInfo, 46, y, 8.5, regular, muted);
+        y -= 14;
+      }
+    } else {
       for (const line of wrap(business.name, 500, 18, bold)) {
         draw(line, 46, y, 18, bold, ink);
         y -= 24;
