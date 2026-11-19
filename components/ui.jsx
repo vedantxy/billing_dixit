@@ -21,26 +21,7 @@ import { initials, statuses } from "../lib/billing.mjs";
 export function Logo() {
   return (
     <span className="brand">
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 34,
-          height: 34,
-          borderRadius: 8,
-          background: "linear-gradient(135deg, #1A1D23 0%, #2A2E37 100%)",
-          border: "1px solid var(--gold)",
-          color: "var(--gold)",
-          fontWeight: 800,
-          fontSize: 12.5,
-          letterSpacing: "0.5px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-          flexShrink: 0,
-        }}
-      >
-        ISE
-      </span>
+      <img src="/billfold.svg" width="36" height="36" alt="" style={{ flexShrink: 0 }} />
       <span>
         I Shree <span style={{ color: "var(--gold)" }}>Enterprise</span>
       </span>

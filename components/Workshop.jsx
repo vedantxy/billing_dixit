@@ -636,28 +636,48 @@ export default function Workshop({ user, today, notify, onBillingChange }) {
           />
         </label>
       </div>
-      <div
-        className="work-tabs"
-        aria-label="Workshop sections"
-        onWheel={(e) => {
-          if (e.deltaY !== 0 && e.currentTarget) {
-            e.currentTarget.scrollLeft += e.deltaY;
-          }
-        }}
-      >
-        {views.map((v) => (
-          <button
-            key={v}
-            type="button"
-            aria-pressed={v === view}
-            onClick={() => {
-              setView(v);
-              setActionError("");
-            }}
-          >
-            {viewLabels[v] || v}
-          </button>
-        ))}
+      <div className="work-tabs-nav" aria-label="Workshop sections">
+        <button
+          className="tab-arrow"
+          aria-label="Previous section"
+          onClick={() => {
+            const idx = views.indexOf(view);
+            if (idx > 0) { setView(views[idx - 1]); setActionError(""); }
+          }}
+          disabled={views.indexOf(view) === 0}
+        >&#8249;</button>
+        <select
+          className="tab-select"
+          value={view}
+          aria-label="Select section"
+          onChange={(e) => { setView(e.target.value); setActionError(""); }}
+        >
+          {views.map((v) => (
+            <option key={v} value={v}>{viewLabels[v] || v}</option>
+          ))}
+        </select>
+        <button
+          className="tab-arrow"
+          aria-label="Next section"
+          onClick={() => {
+            const idx = views.indexOf(view);
+            if (idx < views.length - 1) { setView(views[idx + 1]); setActionError(""); }
+          }}
+          disabled={views.indexOf(view) === views.length - 1}
+        >&#8250;</button>
+        <div className="tab-pills">
+          {views.map((v) => (
+            <button
+              key={v}
+              type="button"
+              className="tab-pill"
+              aria-pressed={v === view}
+              onClick={() => { setView(v); setActionError(""); }}
+            >
+              {viewLabels[v] || v}
+            </button>
+          ))}
+        </div>
       </div>
       {error && (
         <>

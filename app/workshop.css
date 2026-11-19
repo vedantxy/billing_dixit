@@ -50,69 +50,113 @@
   box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
 }
 
-.work-tabs {
+/* ── Tab Navigation — arrow + dropdown (mobile-first, no scrollbar) ── */
+.work-tabs-nav {
   display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--line);
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid var(--line);
   margin: 0 0 24px;
-  padding: 4px 2px 4px;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(201, 168, 76, 0.4) transparent;
+  padding: 0 0 0;
+  position: relative;
 }
 
-/* Modern Sleek Micro-Scrollbar for work-tabs */
-.work-tabs::-webkit-scrollbar {
-  height: 4px;
-}
-
-.work-tabs::-webkit-scrollbar-track {
+/* Arrow buttons flanking the select */
+.tab-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
   background: var(--surface-2);
-  border-radius: 999px;
+  color: var(--sub);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.work-tabs::-webkit-scrollbar-thumb {
-  background: rgba(201, 168, 76, 0.45);
-  border-radius: 999px;
-  transition: background 0.2s ease;
+.tab-arrow:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(201, 168, 76, 0.08);
 }
 
-.work-tabs::-webkit-scrollbar-thumb:hover {
-  background: var(--gold);
+.tab-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
-.work-tabs button {
+/* Dropdown select for mobile / small screens */
+.tab-select {
+  flex: 1;
+  max-width: 220px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.tab-select:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
+}
+
+/* Full pill strip — visible on wider screens */
+.tab-pills {
+  display: none;
+  gap: 4px;
+  flex: 1;
+  align-items: center;
+}
+
+@media (min-width: 820px) {
+  .tab-arrow,
+  .tab-select { display: none; }
+  .tab-pills { display: flex; }
+}
+
+.tab-pill {
   white-space: nowrap;
-  padding: 11px 16px 10px;
+  padding: 10px 15px 9px;
   color: var(--sub);
   border: 1px solid transparent;
   border-bottom: 2px solid transparent;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 550;
   border-radius: 8px 8px 0 0;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   background: transparent;
   cursor: pointer;
+  margin-bottom: -2px;
 }
 
-.work-tabs button[aria-pressed="true"] {
+.tab-pill[aria-pressed="true"] {
   border-bottom-color: var(--gold);
   color: var(--ink);
   font-weight: 650;
-  background: linear-gradient(180deg, rgba(201, 168, 76, 0.14) 0%, rgba(201, 168, 76, 0.04) 100%);
-  border-top: 1px solid rgba(201, 168, 76, 0.3);
-  border-left: 1px solid rgba(201, 168, 76, 0.2);
-  border-right: 1px solid rgba(201, 168, 76, 0.2);
-  box-shadow: 0 2px 8px rgba(201, 168, 76, 0.1);
+  background: linear-gradient(180deg, rgba(201, 168, 76, 0.13) 0%, rgba(201, 168, 76, 0.03) 100%);
+  border-top: 1px solid rgba(201, 168, 76, 0.28);
+  border-left: 1px solid rgba(201, 168, 76, 0.18);
+  border-right: 1px solid rgba(201, 168, 76, 0.18);
+  box-shadow: 0 2px 6px rgba(201, 168, 76, 0.08);
 }
 
-.work-tabs button:hover:not([aria-pressed="true"]) {
+.tab-pill:hover:not([aria-pressed="true"]) {
   background: var(--surface-2);
   color: var(--ink);
-  border-radius: 8px 8px 0 0;
 }
+
 
 /* Month Hero Section - Sleek Charcoal + Gold Card */
 .month-hero {

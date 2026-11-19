@@ -217,24 +217,15 @@ export default function Workspace({ user }) {
           <X size={18} />
         </button>
         <div className="workspace-chip">
-          <span
-            className="workspace-icon"
-            style={{
-              background: "linear-gradient(135deg, var(--gold) 0%, #A38430 100%)",
-              color: "#111827",
-              fontWeight: 800,
-              fontSize: 11,
-              letterSpacing: "0.5px",
-            }}
-          >
-            ISE
+          <span className="workspace-icon">
+            <img src="/billfold.svg" width="20" height="20" alt="" style={{ display: "block" }} />
           </span>
           <div>
             <strong>I Shree Enterprise</strong>
-            <small>ISE Billing & Operations</small>
+            <small>Billing & Operations</small>
           </div>
         </div>
-        <div className="nav-group-label">ISE Platform</div>
+        <div className="nav-group-label">I Shree Enterprise</div>
         <nav aria-label="Main navigation">
           {Object.entries(sections).map(([id, s]) => (
             <a
