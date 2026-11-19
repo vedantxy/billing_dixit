@@ -1627,10 +1627,16 @@ tbody tr:hover {
 }
 
 /* ── Login page (entry screen) ── */
+main.entry-screen,
 .entry-screen {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 100dvh;
 }
 
 .entry-art {
@@ -1892,7 +1898,11 @@ tbody tr:hover {
     font-size: 16px;
   }
 
+  main.entry-screen,
   .entry-screen {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     grid-template-columns: 1fr;
   }
 
