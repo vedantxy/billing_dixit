@@ -217,15 +217,24 @@ export default function Workspace({ user }) {
           <X size={18} />
         </button>
         <div className="workspace-chip">
-          <span className="workspace-icon">
-            <WalletCards size={17} />
+          <span
+            className="workspace-icon"
+            style={{
+              background: "linear-gradient(135deg, var(--gold) 0%, #A38430 100%)",
+              color: "#111827",
+              fontWeight: 800,
+              fontSize: 11,
+              letterSpacing: "0.5px",
+            }}
+          >
+            ISE
           </span>
           <div>
             <strong>I Shree Enterprise</strong>
-            <small>Billing & Operations</small>
+            <small>ISE Billing & Operations</small>
           </div>
         </div>
-        <div className="nav-group-label">I Shree Enterprise</div>
+        <div className="nav-group-label">ISE Platform</div>
         <nav aria-label="Main navigation">
           {Object.entries(sections).map(([id, s]) => (
             <a

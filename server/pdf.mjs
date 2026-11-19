@@ -115,10 +115,12 @@ async function documentPdf(inv, statement, loadFont) {
         width: 595,
         height: 842,
       });
-      // Document title and ID on top right
-      draw(runningTitle.toUpperCase(), 549, 810, 8.5, bold, rgb(0.2, 0.25, 0.3), true);
-      draw(documentId, 549, 796, 11, bold, ink, true);
-      y = 740;
+      // Document title and ID on top right with short form ISE
+      draw("ISE", 549, 818, 11, bold, goldDark, true);
+      draw(runningTitle.toUpperCase(), 549, 805, 8, bold, rgb(0.35, 0.38, 0.42), true);
+      draw(documentId, 549, 792, 10.5, bold, ink, true);
+      // Content starts well below the letterpad gold header bar (zero overlapping!)
+      y = 665;
     } else {
       // Vector header fallback
       page.drawRectangle({
@@ -128,10 +130,10 @@ async function documentPdf(inv, statement, loadFont) {
         height: 55,
         color: headerBg,
       });
-      const shreeLabel = "I SHREE";
-      draw(shreeLabel, 46, 810, 16, bold, rgb(1, 1, 1));
-      const shreeW = width(shreeLabel, bold, 16);
-      draw("ENTERPRISE", 46 + shreeW + 6, 810, 16, bold, gold);
+      const shreeLabel = "ISE · I SHREE";
+      draw(shreeLabel, 46, 810, 15, bold, rgb(1, 1, 1));
+      const shreeW = width(shreeLabel, bold, 15);
+      draw("ENTERPRISE", 46 + shreeW + 6, 810, 15, bold, gold);
       draw(runningTitle.toUpperCase(), 549, 815, 8, regular, pale, true);
       draw(documentId, 549, 804, 10, bold, rgb(1, 1, 1), true);
       page.drawLine({
@@ -140,7 +142,7 @@ async function documentPdf(inv, statement, loadFont) {
         thickness: 1.5,
         color: gold,
       });
-      y = 750;
+      y = 740;
     }
   }
   function room(h) {
@@ -173,7 +175,8 @@ async function documentPdf(inv, statement, loadFont) {
   if (inv) {
     freshPage();
     if (letterpadImage) {
-      // Letterpad already has the official logo & name
+      draw("ISE · TAX INVOICE", 46, y, 9, bold, goldDark);
+      y -= 14;
       const contactInfo = [business.address, business.contact, business.taxId ? "GSTIN: " + business.taxId : ""]
         .filter(Boolean)
         .join(" · ");
@@ -182,7 +185,7 @@ async function documentPdf(inv, statement, loadFont) {
         y -= 14;
       }
     } else {
-      for (const line of wrap(business.name, 495, 18, bold)) {
+      for (const line of wrap("ISE · " + business.name, 495, 18, bold)) {
         draw(line, 46, y, 18, bold, ink);
         y -= 24;
       }
@@ -310,6 +313,8 @@ async function documentPdf(inv, statement, loadFont) {
       : "Statement of Accounts";
     freshPage();
     if (letterpadImage) {
+      draw("ISE · FACTORY STATEMENT OF ACCOUNTS", 46, y, 9.5, bold, goldDark);
+      y -= 15;
       const contactInfo = [business.address, business.contact, business.taxId ? "GSTIN: " + business.taxId : ""]
         .filter(Boolean)
         .join(" · ");
@@ -318,13 +323,13 @@ async function documentPdf(inv, statement, loadFont) {
         y -= 14;
       }
     } else {
-      for (const line of wrap(business.name, 500, 18, bold)) {
+      for (const line of wrap("ISE · " + business.name, 500, 18, bold)) {
         draw(line, 46, y, 18, bold, ink);
         y -= 24;
       }
     }
-    draw("Accounting month  /  " + statement.month, 46, y, 11, regular, muted);
-    y -= 30;
+    draw("Accounting month  /  " + statement.month, 46, y, 10.5, bold, ink);
+    y -= 25;
     for (const table of statement.tables) {
       const cellWidth = 503 / table.headers.length,
         size = 8.5,
@@ -349,11 +354,11 @@ async function documentPdf(inv, statement, loadFont) {
         y -= height;
       };
       const title = () => {
-        draw(table.title, 46, y, 12, bold);
-        y -= 21;
+        draw(table.title, 46, y, 11.5, bold);
+        y -= 18;
         header();
       };
-      room(82);
+      room(85);
       title();
       if (!table.rows.length) {
         draw("No entries", 49, y, 9, regular, muted);
@@ -363,7 +368,7 @@ async function documentPdf(inv, statement, loadFont) {
         const cells = cellLines(row),
           depth = Math.max(1, ...cells.map((l) => l.length));
         for (let n = 0; n < depth; n++) {
-          if (y < 77) {
+          if (y < 85) {
             freshPage();
             title();
           }
@@ -389,7 +394,7 @@ async function documentPdf(inv, statement, loadFont) {
       thickness: 0.7,
       color: pale,
     });
-    draw("I Shree Enterprise  |  " + documentId, 46, 34, 8, regular, muted);
+    draw("ISE · I Shree Enterprise  |  " + documentId, 46, 34, 8, regular, muted);
     draw(i + 1 + " / " + pages.length, 549, 34, 8, regular, muted, true);
   });
   return pdf.save();

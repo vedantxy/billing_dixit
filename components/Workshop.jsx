@@ -636,7 +636,15 @@ export default function Workshop({ user, today, notify, onBillingChange }) {
           />
         </label>
       </div>
-      <div className="work-tabs" aria-label="Workshop sections">
+      <div
+        className="work-tabs"
+        aria-label="Workshop sections"
+        onWheel={(e) => {
+          if (e.deltaY !== 0 && e.currentTarget) {
+            e.currentTarget.scrollLeft += e.deltaY;
+          }
+        }}
+      >
         {views.map((v) => (
           <button
             key={v}
