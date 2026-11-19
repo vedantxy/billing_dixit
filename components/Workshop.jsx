@@ -43,6 +43,18 @@ const views = [
   "Reports",
   "Settings",
 ];
+
+const viewLabels = {
+  "Monthly result": "Overview (P&L)",
+  Attendance: "Staff Attendance",
+  Payroll: "Karigar Payroll",
+  Sales: "Party Sales & Challans",
+  Expenses: "Expense Register",
+  Materials: "Material Purchases",
+  Rojmel: "Daily Rojmel",
+  Reports: "PDF Reports & Export",
+  Settings: "Factory Profile",
+};
 const categories = {
   Payroll: ["advance", "payout", "night", "bonus", "adjustment"],
   Sales: ["sale"],
@@ -420,9 +432,6 @@ function Registers({ book, view, open, canWrite }) {
           ])}
         />
       </section>
-      {["Sales", "Expenses", "Materials"].includes(view) && (
-        <ReportPreview tables={reportTables(detailed, [reportKey[view]])} />
-      )}
     </>
   );
 }
@@ -638,7 +647,7 @@ export default function Workshop({ user, today, notify, onBillingChange }) {
               setActionError("");
             }}
           >
-            {v}
+            {viewLabels[v] || v}
           </button>
         ))}
       </div>
@@ -656,7 +665,7 @@ export default function Workshop({ user, today, notify, onBillingChange }) {
       {actionError && !modal && <Notice error>{actionError}</Notice>}
       {!book && !error && (
         <p role="status" className="loading">
-          <RefreshCw size={16} /> Loading month…
+          <RefreshCw size={16} /> Loading factory accounts…
         </p>
       )}
       {book && (
@@ -665,9 +674,9 @@ export default function Workshop({ user, today, notify, onBillingChange }) {
             <>
               <div className="month-hero">
                 <div>
-                  <p className="folio-label">MONTHLY PROFIT &amp; LOSS</p>
+                  <p className="folio-label">I SHREE ENTERPRISE · MONTHLY PERFORMANCE</p>
                   <h2>{monthTitle(book.month)}</h2>
-                  <span>Sales less workshop expenses and earned wages</span>
+                  <span>Factory jobwork, net revenue and operational accounts</span>
                 </div>
                 <strong>{money(book.totals.profit)}</strong>
               </div>

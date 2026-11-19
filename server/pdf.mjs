@@ -3,22 +3,37 @@ import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { invoiceNumber, money, niceDate, statuses } from "../lib/billing.mjs";
 
-const ink = rgb(0.12, 0.13, 0.17),
-  muted = rgb(0.36, 0.38, 0.42),
-  purple = rgb(0.06, 0.34, 0.28);
-const pale = rgb(0.84, 0.89, 0.86);
+const ink = rgb(0.067, 0.094, 0.153);       // #111827 dark
+const muted = rgb(0.42, 0.45, 0.50);          // gray muted
+const gold = rgb(0.788, 0.659, 0.298);         // #C9A84C gold
+const goldDark = rgb(0.659, 0.529, 0.227);     // darker gold
+const pale = rgb(0.898, 0.914, 0.929);         // light gray line
+const headerBg = rgb(0.102, 0.114, 0.137);     // #1A1D23 dark charcoal
+
 export const invoicePdf = (invoice, loadFont) =>
   documentPdf(invoice, invoice.workshopAnnex, loadFont);
 export const workshopPdf = (statement, loadFont) =>
   documentPdf(null, statement, loadFont);
 async function documentPdf(inv, statement, loadFont) {
   const business = inv?.seller ||
-    statement?.profile || { name: "Billfold Workshop" };
+    statement?.profile || { name: "I Shree Enterprise" };
   const documentId = inv ? invoiceNumber(inv.sequence) : statement.month;
-  let runningTitle = inv ? "Invoice" : "Workshop statement";
+  let runningTitle = inv ? "Tax Invoice" : "Statement of Accounts";
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   pdf.setTitle(documentId + " — " + business.name);
+
+  // Load official I Shree Enterprise letterpad image
+  let letterpadImage = null;
+  try {
+    const { readFile } = await import("node:fs/promises");
+    const path = await import("node:path");
+    const imgBuf = await readFile(path.join(process.cwd(), "public/letterpad.jpg"));
+    letterpadImage = await pdf.embedJpg(imgBuf);
+  } catch (err) {
+    // If not found, use vector branding fallback
+  }
+
   const content = [
     JSON.stringify(business),
     JSON.stringify(statement),
@@ -72,20 +87,50 @@ async function documentPdf(inv, statement, loadFont) {
       x += run.font.widthOfTextAtSize(run.text, size);
     }
   }
-  const rule = (yy) =>
+  const rule = (yy, color = pale) =>
     page.drawLine({
       start: { x: 46, y: yy },
       end: { x: 549, y: yy },
       thickness: 0.7,
-      color: pale,
+      color,
     });
   function freshPage() {
     page = pdf.addPage([595, 842]);
-    y = 780;
-    draw(runningTitle, 46, y, 14, bold, purple);
-    draw(documentId, 549, y, 12, bold, ink, true);
-    rule(y - 17);
-    y -= 45;
+    if (letterpadImage) {
+      // Exact factory letterpad template with emblem logo, header and watermark!
+      page.drawImage(letterpadImage, {
+        x: 0,
+        y: 0,
+        width: 595,
+        height: 842,
+      });
+      // Document title and ID on top right
+      draw(runningTitle.toUpperCase(), 549, 810, 8.5, bold, rgb(0.2, 0.25, 0.3), true);
+      draw(documentId, 549, 796, 11, bold, ink, true);
+      y = 740;
+    } else {
+      // Vector header fallback
+      page.drawRectangle({
+        x: 0,
+        y: 787,
+        width: 595,
+        height: 55,
+        color: headerBg,
+      });
+      const shreeLabel = "I SHREE";
+      draw(shreeLabel, 46, 810, 16, bold, rgb(1, 1, 1));
+      const shreeW = width(shreeLabel, bold, 16);
+      draw("ENTERPRISE", 46 + shreeW + 6, 810, 16, bold, gold);
+      draw(runningTitle.toUpperCase(), 549, 815, 8, regular, pale, true);
+      draw(documentId, 549, 804, 10, bold, rgb(1, 1, 1), true);
+      page.drawLine({
+        start: { x: 0, y: 775 },
+        end: { x: 595, y: 775 },
+        thickness: 1.5,
+        color: gold,
+      });
+      y = 750;
+    }
   }
   function room(h) {
     if (y - h < 75) freshPage();
@@ -116,53 +161,76 @@ async function documentPdf(inv, statement, loadFont) {
   }
   if (inv) {
     freshPage();
-    for (const line of wrap(business.name, 495, 20, bold)) {
-      draw(line, 46, y, 20, bold);
-      y -= 25;
-    }
-    for (const line of wrap(
-      [business.address, business.contact, business.taxId]
+    if (letterpadImage) {
+      // Letterpad already has the official logo & name
+      const contactInfo = [business.address, business.contact, business.taxId ? "GSTIN: " + business.taxId : ""]
         .filter(Boolean)
-        .join(" · "),
-      495,
-      9,
-    )) {
-      draw(line, 46, y, 9, regular, muted);
-      y -= 13;
+        .join(" · ");
+      if (contactInfo) {
+        draw(contactInfo, 46, y, 8.5, regular, muted);
+        y -= 14;
+      }
+    } else {
+      for (const line of wrap(business.name, 495, 18, bold)) {
+        draw(line, 46, y, 18, bold, ink);
+        y -= 24;
+      }
+      for (const line of wrap(
+        [business.address, business.contact, business.taxId]
+          .filter(Boolean)
+          .join(" · "),
+        495,
+        9,
+      )) {
+        draw(line, 46, y, 9, regular, muted);
+        y -= 13;
+      }
+      y -= 6;
+      rule(y, pale);
     }
-    y -= 24;
+
+    y -= 14;
     draw(
       statuses[inv.status] + "  ·  " + niceDate(inv.issuedOn, true),
       46,
       y,
-      11,
+      10,
       regular,
       muted,
     );
-    y -= 34;
+    y -= 28;
     draw("BILL TO", 46, y, 9, bold, muted);
     draw("DUE DATE", 549, y, 9, bold, muted, true);
-    y -= 18;
-    draw(niceDate(inv.dueOn, true), 549, y, 11, regular, ink, true);
+    y -= 16;
+    draw(niceDate(inv.dueOn, true), 549, y, 10.5, regular, ink, true);
     for (const line of wrap(inv.billTo, 340, 12, bold)) {
       draw(line, 46, y, 12, bold);
-      y -= 17;
+      y -= 16;
     }
     for (const line of [
       ...wrap(inv.billEmail, 350),
       ...wrap(inv.billAddress, 400),
     ]) {
-      draw(line, 46, y, 10, regular, muted);
-      y -= 14;
+      draw(line, 46, y, 9.5, regular, muted);
+      y -= 13;
     }
-    y -= 16;
+    y -= 14;
     function tableHead() {
-      draw("Description", 46, y, 10, bold);
-      draw("Qty", 353, y, 10, bold, ink, true);
-      draw("Unit price", 447, y, 10, bold, ink, true);
-      draw("Amount", 549, y, 10, bold, ink, true);
+      // Light gold header background
+      const headerHeight = 28;
+      page.drawRectangle({
+        x: 46,
+        y: y - headerHeight + 14,
+        width: 503,
+        height: headerHeight,
+        color: rgb(0.992, 0.969, 0.898),
+      });
+      draw("Description", 49, y, 10, bold, goldDark);
+      draw("Qty", 353, y, 10, bold, goldDark, true);
+      draw("Unit price", 447, y, 10, bold, goldDark, true);
+      draw("Amount", 549, y, 10, bold, goldDark, true);
       y -= 9;
-      rule(y);
+      rule(y, pale);
       y -= 20;
     }
     tableHead();
@@ -182,7 +250,7 @@ async function documentPdf(inv, statement, loadFont) {
       y -= 8;
     }
     room(150);
-    rule(y);
+    rule(y, pale);
     y -= 22;
     const amounts = [
       ["Subtotal", inv.subtotal],
@@ -204,7 +272,7 @@ async function documentPdf(inv, statement, loadFont) {
         y,
         10,
         strong ? bold : regular,
-        strong ? purple : ink,
+        strong ? gold : ink,
         true,
       );
       y -= 19;
@@ -227,14 +295,16 @@ async function documentPdf(inv, statement, loadFont) {
   if (statement) {
     runningTitle = inv
       ? "Invoice attachment · " + statement.month
-      : "Workshop statement";
+      : "Statement of Accounts";
     freshPage();
-    for (const line of wrap(business.name, 500, 20, bold)) {
-      draw(line, 46, y, 20, bold);
-      y -= 25;
+    if (!letterpadImage) {
+      for (const line of wrap(business.name, 500, 18, bold)) {
+        draw(line, 46, y, 18, bold, ink);
+        y -= 24;
+      }
     }
     draw("Accounting month  /  " + statement.month, 46, y, 11, regular, muted);
-    y -= 34;
+    y -= 30;
     for (const table of statement.tables) {
       const cellWidth = 503 / table.headers.length,
         size = 8.5,
@@ -249,11 +319,11 @@ async function documentPdf(inv, statement, loadFont) {
           y: y - height + 9,
           width: 503,
           height,
-          color: rgb(0.91, 0.95, 0.92),
+          color: rgb(0.992, 0.969, 0.898),
         });
         lines.forEach((lines, i) =>
           lines.forEach((line, n) =>
-            draw(line, 49 + i * cellWidth, y - n * leading, size, bold, purple),
+            draw(line, 49 + i * cellWidth, y - n * leading, size, bold, goldDark),
           ),
         );
         y -= height;
@@ -283,7 +353,7 @@ async function documentPdf(inv, statement, loadFont) {
           y -= leading;
         }
         y -= 3;
-        rule(y + 5);
+        rule(y + 5, pale);
         y -= 4;
       }
       y -= 15;
@@ -292,8 +362,14 @@ async function documentPdf(inv, statement, loadFont) {
   const pages = pdf.getPages();
   pages.forEach((p, i) => {
     page = p;
-    rule(50);
-    draw("Billfold Workshop  /  " + documentId, 46, 34, 8, regular, muted);
+    // Footer line in pale gray
+    p.drawLine({
+      start: { x: 46, y: 50 },
+      end: { x: 549, y: 50 },
+      thickness: 0.7,
+      color: pale,
+    });
+    draw("I Shree Enterprise  |  " + documentId, 46, 34, 8, regular, muted);
     draw(i + 1 + " / " + pages.length, 549, 34, 8, regular, muted, true);
   });
   return pdf.save();

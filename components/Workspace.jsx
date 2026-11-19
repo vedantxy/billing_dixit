@@ -26,17 +26,17 @@ import Records from "./Records.jsx";
 import Dialogs from "./Dialogs.jsx";
 const sections = {
   overview: {
-    label: "Overview",
-    title: "Billing overview",
-    desc: "Revenue, renewals and invoices at a glance.",
+    label: "Dashboard",
+    title: "Dashboard",
+    desc: "Welcome to I Shree Enterprise · Revenue, invoices and operations at a glance.",
     icon: LayoutDashboard,
     action: "New invoice",
     form: "invoiceForm",
   },
   workshop: {
-    label: "Workshop books",
-    title: "Workshop books",
-    desc: "Jobwork, payroll and monthly accounts.",
+    label: "Factory Accounts",
+    title: "Factory Accounts",
+    desc: "Jobwork, payroll, challans and monthly accounts for I Shree Enterprise.",
     icon: BookOpen,
   },
   customers: {
@@ -205,7 +205,7 @@ export default function Workspace({ user }) {
         <a
           className="brand-link"
           href="#overview"
-          aria-label="Billfold overview"
+          aria-label="I Shree Enterprise overview"
         >
           <Logo />
         </a>
@@ -221,11 +221,11 @@ export default function Workspace({ user }) {
             <WalletCards size={17} />
           </span>
           <div>
-            <strong>Workshop accounts</strong>
-            <small>Billing &amp; operations</small>
+            <strong>I Shree Enterprise</strong>
+            <small>Billing & Operations</small>
           </div>
         </div>
-        <div className="nav-group-label">Workspace</div>
+        <div className="nav-group-label">I Shree Enterprise</div>
         <nav aria-label="Main navigation">
           {Object.entries(sections).map(([id, s]) => (
             <a
@@ -273,7 +273,7 @@ export default function Workspace({ user }) {
               <Menu size={20} />
             </button>
             <PanelLeft className="desktop-glyph" size={16} />
-            <span>Workspace</span>
+            <span>I Shree Enterprise</span>
             <ChevronRight size={13} />
             <strong>{info.label}</strong>
           </div>
@@ -309,7 +309,7 @@ export default function Workspace({ user }) {
           {!data && !error && (
             <div className="loading" role="status">
               <RefreshCw size={18} />
-              Loading billing records…
+              Loading records…
             </div>
           )}
           {book &&

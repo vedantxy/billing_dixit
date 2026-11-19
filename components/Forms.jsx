@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Trash2, Sparkles, Copy, FileText, CheckCircle2, ShoppingBag, Check, Minus, PackagePlus } from "lucide-react";
 import {
   cadences,
   invoiceNumber,
@@ -347,18 +347,73 @@ const blankLine = () => ({
   description: "",
   quantity: "1",
   price: "",
+  hsnCode: "",
 });
 export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
   const [client, setClient] = useState(modal.customerId || ""),
     [subId, setSubId] = useState(modal.subscriptionId || "");
-  const [lines, setLines] = useState(() =>
-    modal.subscriptionId ? [] : [blankLine()],
-  );
+
+  // Build complete product & plan catalog
+  const productCatalog = useMemo(() => {
+    const items = [];
+    const plans = availablePlans(book);
+    for (const p of plans) {
+      const prod = book.products.find((x) => x.id === p.productId);
+      items.push({
+        id: p.id,
+        productId: p.productId,
+        title: prod ? prod.name + (p.name !== prod.name ? " · " + p.name : "") : p.name,
+        name: p.name,
+        price: p.price,
+        cadence: p.cadence,
+        hsn: "9988",
+      });
+    }
+    // Also include enabled products
+    for (const prod of book.products.filter((p) => p.enabled)) {
+      if (!book.plans.some((pl) => pl.productId === prod.id && pl.enabled)) {
+        items.push({
+          id: "prod_" + prod.id,
+          productId: prod.id,
+          title: prod.name,
+          name: prod.name,
+          price: 0,
+          cadence: "once",
+          hsn: "9988",
+        });
+      }
+    }
+    return items;
+  }, [book]);
+
+  // Pre-select first product by default so form is NEVER blank or invalid!
+  const [lines, setLines] = useState(() => {
+    if (modal.subscriptionId) return [];
+    if (productCatalog.length > 0) {
+      const first = productCatalog[0];
+      return [
+        {
+          key: crypto.randomUUID(),
+          planId: first.id,
+          description: first.title,
+          quantity: "1",
+          price: String(first.price / 100),
+          hsnCode: first.hsn,
+        },
+      ];
+    }
+    return [blankLine()];
+  });
+
   const [discount, setDiscount] = useState("0"),
-    [tax, setTax] = useState("0"),
+    [tax, setTax] = useState("18"), // Default 18% GST
     [stage, setStage] = useState("issued");
   const [issued, setIssued] = useState(today),
     [due, setDue] = useState(plusDays(today, 7));
+  const [notes, setNotes] = useState("Payment terms: Net 15 days. Cheque in favor of I Shree Enterprise.");
+  const [salesRecords, setSalesRecords] = useState([]);
+  const [loadingSales, setLoadingSales] = useState(false);
+
   const emptyWorkshop = { month: "", items: [], sections: [] };
   const [workshop, setWorkshop] = useState(emptyWorkshop);
   const hasSource = workshop.items.length > 0;
@@ -366,30 +421,165 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
   const possibleSubs = book.subscriptions.filter(
     (s) => s.customerId === client && ["active", "past_due"].includes(s.status),
   );
-  const catalog = availablePlans(book).filter((p) => p.cadence === "once"),
-    customers = currentCustomers(book);
+  const customers = currentCustomers(book);
+
+  // Find previous invoices for this customer
+  const previousInvoices = client
+    ? book.invoices.filter((i) => i.customerId === client && i.lines?.length)
+    : [];
+  const lastInvoice = previousInvoices.length ? previousInvoices[0] : null;
+
+  // Fetch unbilled sales/challans from workshop records for this customer
+  useEffect(() => {
+    if (!client) {
+      setSalesRecords([]);
+      return;
+    }
+    let active = true;
+    setLoadingSales(true);
+    fetch("/api/workshop?month=" + issued.slice(0, 7))
+      .then((r) => r.json())
+      .then((d) => {
+        if (active && d?.records) {
+          const unbilled = d.records.filter(
+            (r) =>
+              r.customerId === client &&
+              !r.voidedAt &&
+              !r.invoiceId &&
+              r.amount > 0 &&
+              ["sale", "expense", "material"].includes(r.kind),
+          );
+          setSalesRecords(unbilled);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoadingSales(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [client, issued]);
+
+  // 1-Click Direct Select Product (adds or increments count directly!)
+  function selectProduct(prod) {
+    const existingIndex = lines.findIndex((l) => l.planId === prod.id || l.description === prod.title);
+    if (existingIndex >= 0) {
+      setLines((curr) =>
+        curr.map((l, i) =>
+          i === existingIndex ? { ...l, quantity: String(Number(l.quantity || 1) + 1) } : l
+        )
+      );
+    } else {
+      const newLine = {
+        key: crypto.randomUUID(),
+        planId: prod.id,
+        description: prod.title,
+        quantity: "1",
+        price: String(prod.price / 100),
+        hsnCode: prod.hsn || "9988",
+      };
+      setLines((curr) => {
+        const filtered = curr.filter((l) => l.description || l.price);
+        return [...filtered, newLine];
+      });
+    }
+  }
+
+  // 1-Click Direct Select Factory Sale
+  function selectSaleRecord(rec) {
+    const title = rec.reference
+      ? `${rec.reference} · ${rec.category || "Factory jobwork"}`
+      : `${rec.category || "Factory delivery"} (${rec.day})`;
+    const existingIndex = lines.findIndex((l) => l.saleId === rec.id || l.description === title);
+    if (existingIndex >= 0) {
+      setLines((curr) =>
+        curr.map((l, i) =>
+          i === existingIndex ? { ...l, quantity: String(Number(l.quantity || 1) + 1) } : l
+        )
+      );
+    } else {
+      const newLine = {
+        key: crypto.randomUUID(),
+        saleId: rec.id,
+        planId: "",
+        description: title,
+        quantity: "1",
+        price: (rec.amount / 100).toFixed(2),
+        hsnCode: "9988",
+      };
+      setLines((curr) => {
+        const filtered = curr.filter((l) => l.description || l.price);
+        return [...filtered, newLine];
+      });
+      setWorkshop((prev) => ({
+        ...prev,
+        month: prev.month || issued.slice(0, 7),
+        items: [...prev.items.filter((x) => x.id !== rec.id), { id: rec.id, amount: rec.amount }],
+      }));
+    }
+  }
+
+  // 1-Click Auto-generate ALL from sales/jobwork
+  function autoGenerateFromSales() {
+    if (!salesRecords.length) return;
+    const newLines = salesRecords.map((r) => ({
+      key: crypto.randomUUID(),
+      saleId: r.id,
+      planId: "",
+      description: r.reference
+        ? `${r.reference} · ${r.category || "Factory jobwork / delivery"}`
+        : `${r.category || "Factory Jobwork"} (${r.day})`,
+      quantity: "1",
+      price: (r.amount / 100).toFixed(2),
+      hsnCode: "9988",
+    }));
+    setLines(newLines);
+    setTax("18"); // Default 18% GST
+    setDiscount("0");
+    setNotes(
+      "Delivered against factory jobwork challans. Payment due upon receipt. Cheque / NEFT in favor of I Shree Enterprise.",
+    );
+    setWorkshop({
+      month: issued.slice(0, 7),
+      items: salesRecords.map((r) => ({ id: r.id, amount: r.amount })),
+      sections: ["sales", "delivery"],
+    });
+  }
+
+  // 1-Click Copy from Last Invoice
+  function copyFromLastInvoice() {
+    if (!lastInvoice) return;
+    const newLines = (lastInvoice.lines || []).map((l) => ({
+      key: crypto.randomUUID(),
+      planId: l.planId || "",
+      description: l.description,
+      quantity: String(l.quantity || 1),
+      price: (l.unitPrice / 100).toFixed(2),
+      hsnCode: l.hsnCode || "",
+    }));
+    if (newLines.length) setLines(newLines);
+    if (lastInvoice.taxBps) setTax(String(lastInvoice.taxBps / 100));
+    if (lastInvoice.discountBps)
+      setDiscount(String(lastInvoice.discountBps / 100));
+    if (lastInvoice.notes) setNotes(lastInvoice.notes);
+  }
+
   const update = (key, patch) =>
     setLines((current) =>
       current.map((l) => (l.key === key ? { ...l, ...patch } : l)),
     );
-  const pick = (line, id) => {
-    const p = catalog.find((p) => p.id === id);
-    update(line.key, {
-      planId: id,
-      description: p
-        ? book.products.find((x) => x.id === p.productId).name + " · " + p.name
-        : "",
-      price: p ? String(p.price / 100) : "",
-    });
-  };
+
   const payload = lines
     .filter((l) => !hasSource || l.description || l.price || l.planId)
     .map((l) => ({
       description: l.description,
-      quantity: Number(l.quantity),
-      unitPrice: cents(l.price),
+      quantity: Number(l.quantity || 1),
+      unitPrice: cents(l.price || 0),
       ...(l.planId ? { planId: l.planId } : {}),
+      ...(l.hsnCode ? { hsnCode: l.hsnCode } : {}),
     }));
+
   const totals = invoiceTotals(
     [
       ...(sub ? [{ quantity: 1, unitPrice: sub.price }] : []),
@@ -399,17 +589,22 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
     cents(discount),
     cents(tax),
   );
+
   function chooseSub(id) {
     setSubId(id);
     if (id && lines.length === 1 && !lines[0].description && !lines[0].price)
       setLines([]);
     if (!id && !lines.length) setLines([blankLine()]);
   }
+
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        const v = formValues(e);
+        if (payload.length === 0 && !sub && !hasSource) {
+          alert("Please select at least one product or sale item for this invoice.");
+          return;
+        }
         save(
           "invoices",
           "POST",
@@ -431,7 +626,7 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
                   },
                 }
               : {}),
-            notes: v.notes,
+            notes,
           },
           "Invoice created",
           (r) => open("invoice", r.id),
@@ -481,14 +676,118 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
           />
         </Field>
       </div>
+
+      {/* ── 1-CLICK DIRECT PRODUCT SELECTION CATALOG ── */}
+      <div className="product-quick-select-section">
+        <div className="pqs-header">
+          <div className="pqs-title">
+            <ShoppingBag size={16} />
+            <span>Select Product / Service (Click to Add / Auto-Count)</span>
+          </div>
+          <span className="pqs-hint">Direct count · No manual typing</span>
+        </div>
+
+        <div className="pqs-grid">
+          {productCatalog.map((prod) => {
+            const isSelected = lines.some((l) => l.planId === prod.id || l.description === prod.title);
+            const selectedItem = lines.find((l) => l.planId === prod.id || l.description === prod.title);
+            const selectedQty = selectedItem ? selectedItem.quantity : 0;
+            return (
+              <button
+                key={prod.id}
+                type="button"
+                className={"pqs-card" + (isSelected ? " selected" : "")}
+                onClick={() => selectProduct(prod)}
+                title="Click to add or count another"
+              >
+                <div className="pqs-card-info">
+                  <strong>{prod.title}</strong>
+                  <span className="pqs-price">{money(prod.price)}</span>
+                </div>
+                <div className="pqs-card-badge">
+                  {isSelected ? (
+                    <span className="qty-badge">
+                      <Check size={12} /> Count: {selectedQty} <b>+</b>
+                    </span>
+                  ) : (
+                    <span className="add-badge">
+                      <Plus size={13} /> Add
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── UNBILLED FACTORY SALES & CHALLANS FOR THIS CUSTOMER ── */}
+      {client && (salesRecords.length > 0 || lastInvoice) && (
+        <div className="auto-gen-box">
+          {salesRecords.length > 0 && (
+            <div className="auto-gen-card sales">
+              <div className="auto-gen-text">
+                <span className="auto-badge">⚡ Factory Sales &amp; Challans</span>
+                <strong>{salesRecords.length} unbilled delivery records found for this customer</strong>
+                <p>Click any sale item below to add directly, or select all with 1 click.</p>
+                <div className="sales-quick-pills">
+                  {salesRecords.map((r) => {
+                    const isAdded = lines.some((l) => l.saleId === r.id || l.description.includes(r.reference || r.day));
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        className={"sale-pill-btn" + (isAdded ? " added" : "")}
+                        onClick={() => selectSaleRecord(r)}
+                      >
+                        {isAdded ? <Check size={12} /> : <Plus size={12} />}
+                        {r.reference || r.category} ({money(r.amount)})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="primary auto-action-btn"
+                onClick={autoGenerateFromSales}
+              >
+                <Sparkles size={14} /> Select All ({salesRecords.length})
+              </button>
+            </div>
+          )}
+
+          {lastInvoice && (
+            <div className="auto-gen-card copy">
+              <div className="auto-gen-text">
+                <span className="auto-badge-gray">📋 Repeat Previous</span>
+                <strong>Copy from previous Invoice #{invoiceNumber(lastInvoice.sequence)}</strong>
+                <p>Auto-fill line items, tax rate, discount &amp; terms from last invoice.</p>
+              </div>
+              <button
+                type="button"
+                className="secondary auto-action-btn"
+                onClick={copyFromLastInvoice}
+              >
+                <Copy size={14} /> Copy Last Items
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <InvoiceWorkshopPicker
         client={client}
         day={issued}
         choice={workshop}
         onChange={setWorkshop}
       />
+
+      {/* ── LINE ITEMS LIST ── */}
       <div className="line-heading">
-        <h3>Line items</h3>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <h3>Selected Invoice Line Items ({lines.length})</h3>
+        </div>
         <button
           type="button"
           className="text-btn"
@@ -496,106 +795,238 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
           onClick={() => setLines([...lines, blankLine()])}
         >
           <Plus size={14} />
-          Add item
+          + Custom item
         </button>
       </div>
+
       {sub && (
-        <div className="sub-line">
-          <span>{sub.planLabel}</span>
-          <b>{money(sub.price)}</b>
+        <>
+          <div className="sub-line">
+            <span>{sub.planLabel}</span>
+            <b>{money(sub.price)}</b>
+          </div>
+          <div
+            className="form-intro"
+            style={{
+              background: "var(--gold-light)",
+              border: "1px solid var(--gold)",
+              borderRadius: 6,
+              padding: "8px 12px",
+              marginBottom: 8,
+              fontSize: "0.85rem",
+              color: "var(--ink)",
+            }}
+          >
+            ✦ Auto-populated from subscription — line items below are additional charges on top of recurring fee.
+          </div>
+        </>
+      )}
+
+      {lines.length === 0 && (
+        <div style={{
+          padding: "24px 16px",
+          textAlign: "center",
+          background: "var(--surface-2)",
+          borderRadius: 8,
+          border: "1px dashed var(--line)",
+          margin: "12px 0",
+          color: "var(--sub)",
+        }}>
+          <ShoppingBag size={24} style={{ margin: "0 auto 8px", color: "var(--gold)" }} />
+          <p style={{ margin: 0, fontWeight: 550, color: "var(--ink)" }}>No products selected yet</p>
+          <p style={{ margin: "4px 0 0", fontSize: 12 }}>Click any product card above to add it to this invoice instantly.</p>
         </div>
       )}
-      {lines.map((l, i) => (
-        <div className="line-editor" key={l.key}>
-          <div className="line-type">
-            <select
-              aria-label={"Item " + (i + 1) + " type"}
-              value={l.planId}
-              onChange={(e) => pick(l, e.target.value)}
-            >
-              <option value="">Custom item</option>
-              {catalog.map((p) => opt(p.id, planName(book, p)))}
-            </select>
-            <button
-              aria-label={"Remove item " + (i + 1)}
-              type="button"
-              className="row-action"
-              disabled={lines.length === 1 && !sub && !hasSource}
-              onClick={() => setLines(lines.filter((x) => x.key !== l.key))}
-            >
-              <Trash2 size={14} />
-            </button>
+
+      {lines.map((l, i) => {
+        const lineAmt = (Number(l.quantity) || 0) * (Number(l.price) || 0);
+        return (
+          <div className="line-editor" key={l.key}>
+            <div className="line-type">
+              <span style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)" }}>
+                Item #{i + 1}
+              </span>
+              <button
+                aria-label={"Remove item " + (i + 1)}
+                type="button"
+                className="row-action"
+                onClick={() => setLines(lines.filter((x) => x.key !== l.key))}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+            <div className="line-fields">
+              <Field name="Description">
+                <input
+                  value={l.description}
+                  placeholder="Item name"
+                  maxLength="200"
+                  onChange={(e) => update(l.key, { description: e.target.value })}
+                />
+              </Field>
+              <Field name="HSN/SAC">
+                <input
+                  value={l.hsnCode}
+                  maxLength="8"
+                  placeholder="9988"
+                  onChange={(e) => update(l.key, { hsnCode: e.target.value })}
+                />
+              </Field>
+              <Field name="Quantity">
+                <div className="qty-stepper">
+                  <button
+                    type="button"
+                    className="stepper-btn"
+                    onClick={() => {
+                      const q = Math.max(1, Number(l.quantity || 1) - 1);
+                      update(l.key, { quantity: String(q) });
+                    }}
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    value={l.quantity}
+                    onChange={(e) => update(l.key, { quantity: e.target.value })}
+                  />
+                  <button
+                    type="button"
+                    className="stepper-btn"
+                    onClick={() => {
+                      const q = Number(l.quantity || 1) + 1;
+                      update(l.key, { quantity: String(q) });
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+              </Field>
+              <Field name="Unit price (₹)">
+                <input
+                  type="number"
+                  min="0"
+                  max="20000000"
+                  step="0.01"
+                  value={l.price}
+                  onChange={(e) => update(l.key, { price: e.target.value })}
+                />
+              </Field>
+              <Field name="Amount">
+                <div
+                  style={{
+                    padding: "6px 12px",
+                    fontWeight: 700,
+                    fontSize: 14,
+                    color: "var(--ink)",
+                    background: "var(--gold-light, #FDF8EC)",
+                    border: "1px solid rgba(201,168,76,0.35)",
+                    borderRadius: 6,
+                    minHeight: 36,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  ₹{lineAmt.toFixed(2)}
+                </div>
+              </Field>
+            </div>
           </div>
-          <div className="line-fields">
-            <Field name="Description">
-              <input
-                value={l.description}
-                maxLength="200"
-                onChange={(e) => update(l.key, { description: e.target.value })}
-                readOnly={!!l.planId}
-                required={
-                  !hasSource || !!(l.description || l.price || l.planId)
-                }
-              />
-            </Field>
-            <Field name="Qty">
-              <input
-                type="number"
-                min="1"
-                max="10000"
-                value={l.quantity}
-                onChange={(e) => update(l.key, { quantity: e.target.value })}
-                required
-              />
-            </Field>
-            <Field name="Unit price (₹)">
-              <input
-                type="number"
-                min="0"
-                max="20000000"
-                step="0.01"
-                value={l.price}
-                onChange={(e) => update(l.key, { price: e.target.value })}
-                readOnly={!!l.planId}
-                required={
-                  !hasSource || !!(l.description || l.price || l.planId)
-                }
-              />
-            </Field>
-          </div>
-        </div>
-      ))}
+        );
+      })}
+
       <div className="form-grid">
         <Field name="Discount (%)">
-          <input
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            value={discount}
-            onChange={(e) => setDiscount(e.target.value)}
-          />
+          <div>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={discount}
+              onChange={(e) => setDiscount(e.target.value)}
+            />
+            <div className="quick-pill-row">
+              {[0, 2, 5, 10, 15].map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={"quick-pill" + (Number(discount) === d ? " active" : "")}
+                  onClick={() => setDiscount(String(d))}
+                >
+                  {d}%
+                </button>
+              ))}
+            </div>
+          </div>
         </Field>
-        <Field name="Tax (%)">
-          <input
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            value={tax}
-            onChange={(e) => setTax(e.target.value)}
-          />
+
+        <Field name="Tax / GST (%)">
+          <div>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={tax}
+              onChange={(e) => setTax(e.target.value)}
+            />
+            <div className="quick-pill-row">
+              {[0, 5, 12, 18, 28].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={"quick-pill" + (Number(tax) === t ? " active" : "")}
+                  onClick={() => setTax(String(t))}
+                >
+                  {t}%
+                </button>
+              ))}
+            </div>
+          </div>
         </Field>
-        <Field name="Notes" wide>
-          <textarea name="notes" rows="2" maxLength="1000" />
+
+        <Field name="Notes &amp; Terms" wide>
+          <div>
+            <textarea
+              name="notes"
+              rows="2"
+              maxLength="1000"
+              value={notes}
+              placeholder="Payment terms, delivery challan details, bank info..."
+              onChange={(e) => setNotes(e.target.value)}
+            />
+            <div className="quick-pill-row notes">
+              {[
+                "Net 15 Days",
+                "Payment on Delivery",
+                "Cheque in favor of I Shree Enterprise",
+                "Goods once sold will not be taken back",
+              ].map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  className="quick-pill note-pill"
+                  onClick={() =>
+                    setNotes((prev) => (prev ? prev + " · " + term : term))
+                  }
+                >
+                  + {term}
+                </button>
+              ))}
+            </div>
+          </div>
         </Field>
+
         <Field name="Save as">
           <select value={stage} onChange={(e) => setStage(e.target.value)}>
-            <option value="issued">Issued invoice</option>
-            <option value="draft">Draft invoice</option>
+            <option value="issued">Issue Now (Send to customer)</option>
+            <option value="draft">Save as Draft (Don&apos;t send yet)</option>
           </select>
         </Field>
       </div>
+
       <div className="invoice-math">
         <span>
           Subtotal <b>{money(totals.subtotal)}</b>
@@ -604,15 +1035,17 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
           Discount <b>−{money(totals.discount)}</b>
         </span>
         <span>
-          Tax <b>{money(totals.tax)}</b>
+          GST ({tax}%) <b>{money(totals.tax)}</b>
         </span>
         <strong>
           Total <b>{money(totals.total)}</b>
         </strong>
       </div>
+
       {!customers.length && (
         <p className="form-intro">Add a customer before creating an invoice.</p>
       )}
+
       <FormFooter
         busy={busy}
         label={stage === "draft" ? "Save draft" : "Create invoice"}

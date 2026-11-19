@@ -1,13 +1,13 @@
 import "@fontsource-variable/dm-sans/index.css";
-import "@fontsource/instrument-serif/latin-400.css";
-import "@fontsource/instrument-serif/latin-400-italic.css";
 import "./globals.css";
 import "./workshop.css";
+
 export const metadata = {
-  title: "Billfold · Workshop accounts",
-  description: "Billing, jobwork challans, payroll and workshop accounts.",
+  title: "I Shree Enterprise · Billing & Accounts",
+  description: "Professional billing, invoicing, payroll and operations management for I Shree Enterprise.",
   icons: { icon: "/billfold.svg" },
 };
+
 export default function Layout({ children }) {
   return (
     <html lang="en">

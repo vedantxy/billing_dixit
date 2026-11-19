@@ -7,11 +7,15 @@ import {
   FileText,
   UsersRound,
   BookOpen,
+  ShieldCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { Logo } from "./ui.jsx";
+
 export default function Login() {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+
   async function submit(e) {
     e.preventDefault();
     setBusy(true);
@@ -31,69 +35,103 @@ export default function Login() {
       setBusy(false);
     }
   }
+
   return (
     <main className="entry-screen">
       <section className="entry-art">
         <Logo />
         <div>
-          <h1>
-            Workshop
+          <h2>
+            I Shree
             <br />
-            <em>accounts.</em>
-          </h1>
-          <ul>
+            <span>Enterprise.</span>
+          </h2>
+          <p>
+            Complete cloud billing, factory jobwork challans, payroll, and operations platform.
+          </p>
+          <ul className="entry-art-features">
             {[
-              [FileText, "Customer billing"],
-              [UsersRound, "Attendance & payroll"],
-              [BookOpen, "Purchases & Rojmel"],
+              [FileText, "Automated GST Invoicing & Line Item Generation"],
+              [BookOpen, "Factory Jobwork, Challans & Monthly Accounts"],
+              [UsersRound, "Staff Attendance, Wages & Payroll"],
+              [ShieldCheck, "Enterprise Letterpad & Secure Statement PDF"],
             ].map(([Icon, text]) => (
               <li key={text}>
-                <Icon size={20} />
-                {text}
+                <span className="feat-icon">
+                  <Icon size={18} />
+                </span>
+                <span>{text}</span>
               </li>
             ))}
           </ul>
         </div>
-        <span className="entry-signature">
-          <Layers3 size={16} /> Billfold Workshop
-        </span>
-      </section>
-      <section className="entry-form">
-        <div className="auth-icon">
-          <LockKeyhole size={23} />
+        <div className="entry-art-footer">
+          <Layers3 size={15} style={{ verticalAlign: "middle", marginRight: 6 }} />
+          Powered by I Shree Enterprise Cloud Suite
         </div>
-        <h2>Sign in to Billfold</h2>
-        <p>Use your workshop staff account.</p>
-        <form onSubmit={submit}>
-          <label className="field">
-            <span>Work email</span>
-            <input
-              name="email"
-              type="email"
-              required
-              autoComplete="username"
-              maxLength="254"
-            />
-          </label>
-          <label className="field">
-            <span>Password</span>
-            <input
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              maxLength="256"
-            />
-          </label>
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
-          <button className="primary" disabled={busy}>
-            {busy ? "Signing in…" : "Sign in"} <ArrowRight size={16} />
-          </button>
-        </form>
+      </section>
+
+      <section className="entry-form">
+        <div className="entry-form-inner">
+          <div className="auth-icon" style={{
+            width: 44,
+            height: 44,
+            borderRadius: 10,
+            background: "var(--gold-light, #FDF8EC)",
+            border: "1px solid rgba(201,168,76,0.3)",
+            display: "grid",
+            placeItems: "center",
+            color: "var(--gold, #C9A84C)",
+            marginBottom: 20
+          }}>
+            <LockKeyhole size={22} />
+          </div>
+          <h1>Welcome back</h1>
+          <p>Sign in to access your enterprise billing workspace</p>
+          
+          <form onSubmit={submit}>
+            <label className="field">
+              <span>Work email</span>
+              <input
+                name="email"
+                type="email"
+                placeholder="staff@ishree.com"
+                required
+                autoComplete="username"
+                maxLength="254"
+              />
+            </label>
+            <label className="field">
+              <span>Password</span>
+              <input
+                name="password"
+                type="password"
+                placeholder="••••••••"
+                required
+                autoComplete="current-password"
+                maxLength="256"
+              />
+            </label>
+            {error && (
+              <p className="entry-error" role="alert" style={{ color: "var(--danger)", margin: "4px 0", fontSize: 13 }}>
+                {error}
+              </p>
+            )}
+            <button className="primary" disabled={busy} style={{
+              width: "100%",
+              padding: "12px 18px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              marginTop: 10,
+              fontSize: 14,
+              fontWeight: 600,
+            }}>
+              {busy ? "Signing in…" : "Sign in to Dashboard"} <ArrowRight size={16} />
+            </button>
+          </form>
+        </div>
       </section>
     </main>
   );

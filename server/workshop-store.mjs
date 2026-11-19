@@ -23,7 +23,7 @@ import {
 } from "../lib/workshop.mjs";
 
 export const defaultProfile = {
-  name: "Billfold Workshop",
+  name: "I Shree Enterprise",
   address: "",
   contact: "",
   taxId: "",

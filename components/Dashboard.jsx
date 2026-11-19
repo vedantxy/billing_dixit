@@ -1,6 +1,8 @@
 import { useState } from "react";
 import {
+  ArrowDown,
   ArrowRight,
+  ArrowUp,
   CalendarDays,
   ChartNoAxesCombined,
   ChevronDown,
@@ -27,7 +29,13 @@ import {
   RowAction,
 } from "./ui.jsx";
 
-function Kpi({ icon: Icon, title, value, detail, tone, onClick }) {
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+function Kpi({ icon: Icon, title, value, detail, tone, onClick, trend }) {
   return (
     <button className={"kpi " + tone} onClick={onClick}>
       <span className="kpi-top">
@@ -35,6 +43,12 @@ function Kpi({ icon: Icon, title, value, detail, tone, onClick }) {
           <Icon size={18} strokeWidth={1.8} />
         </span>
         <span>{title}</span>
+        {trend != null && (
+          <span className={"kpi-trend " + (trend >= 0 ? "up" : "down")}>
+            {trend >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+            {Math.abs(trend)}%
+          </span>
+        )}
       </span>
       <strong>{value}</strong>
       <small>{detail}</small>

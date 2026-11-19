@@ -21,9 +21,9 @@ import { initials, statuses } from "../lib/billing.mjs";
 export function Logo() {
   return (
     <span className="brand">
-      <img src="/billfold.svg" width="39" height="39" alt="" />
+      <img src="/billfold.svg" width="36" height="36" alt="" />
       <span>
-        Billfold<span className="brand-stop">.</span>
+        I Shree <span style={{ color: "var(--gold)" }}>Enterprise</span>
       </span>
     </span>
   );
