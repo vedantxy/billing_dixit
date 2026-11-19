@@ -28,11 +28,15 @@
 
 html {
   min-height: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
   background: var(--bg);
 }
 
 body {
   margin: 0;
+  max-width: 100vw;
+  overflow-x: hidden;
   font-family: "DM Sans Variable", "DM Sans", Arial, sans-serif;
   color: var(--ink);
   font-size: 14px;
@@ -143,6 +147,8 @@ h3 {
 /* ── App shell ── */
 .app-shell {
   min-height: 100vh;
+  max-width: 100vw;
+  overflow-x: hidden;
   display: grid;
   grid-template-columns: var(--side) minmax(0, 1fr);
 }
@@ -329,6 +335,8 @@ h3 {
 /* ── Main column ── */
 .main-column {
   min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* ── Topbar ── */
@@ -340,6 +348,8 @@ h3 {
   justify-content: space-between;
   align-items: center;
   padding: 0 clamp(20px, 3.05vw, 55px);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .breadcrumb,
@@ -374,10 +384,12 @@ h3 {
 
 /* ── Main content ── */
 main {
-  max-width: 1680px;
+  max-width: min(1680px, 100%);
+  width: 100%;
   margin: auto;
   padding: 32px clamp(20px, 3.05vw, 55px) 48px;
   outline: none;
+  box-sizing: border-box;
 }
 
 .page-heading {
