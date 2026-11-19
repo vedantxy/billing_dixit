@@ -35,6 +35,7 @@ html {
 
 body {
   margin: 0;
+  width: 100vw;
   max-width: 100vw;
   overflow-x: hidden;
   font-family: "DM Sans Variable", "DM Sans", Arial, sans-serif;
@@ -147,8 +148,9 @@ h3 {
 /* ── App shell ── */
 .app-shell {
   min-height: 100vh;
+  width: 100vw;
   max-width: 100vw;
-  overflow-x: hidden;
+  overflow-x: clip;
   display: grid;
   grid-template-columns: var(--side) minmax(0, 1fr);
 }
@@ -336,7 +338,7 @@ h3 {
 .main-column {
   min-width: 0;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* ── Topbar ── */

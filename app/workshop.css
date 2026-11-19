@@ -50,24 +50,26 @@
   box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
 }
 
-/* ── Tab Navigation — arrow + dropdown (mobile-first, no scrollbar) ── */
+/* ── Tab Navigation — arrow + dropdown, NO scrollbar, NO overflow ── */
 .work-tabs-nav {
   display: flex;
   align-items: center;
   gap: 8px;
   border-bottom: 2px solid var(--line);
   margin: 0 0 24px;
-  padding: 0 0 0;
-  position: relative;
+  padding: 8px 0;
+  overflow: hidden;
+  max-width: 100%;
 }
 
-/* Arrow buttons flanking the select */
+/* Arrow buttons */
 .tab-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--surface-2);
@@ -76,7 +78,6 @@
   line-height: 1;
   cursor: pointer;
   transition: all 0.15s ease;
-  flex-shrink: 0;
 }
 
 .tab-arrow:hover:not(:disabled) {
@@ -90,10 +91,11 @@
   cursor: default;
 }
 
-/* Dropdown select for mobile / small screens */
+/* Dropdown — always visible, expands to fill remaining space */
 .tab-select {
   flex: 1;
-  max-width: 220px;
+  min-width: 0;
+  max-width: 300px;
   height: 36px;
   padding: 0 12px;
   border-radius: 8px;
@@ -112,50 +114,9 @@
   box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
 }
 
-/* Full pill strip — visible on wider screens */
-.tab-pills {
-  display: none;
-  gap: 4px;
-  flex: 1;
-  align-items: center;
-}
-
-@media (min-width: 820px) {
-  .tab-arrow,
-  .tab-select { display: none; }
-  .tab-pills { display: flex; }
-}
-
-.tab-pill {
-  white-space: nowrap;
-  padding: 10px 15px 9px;
-  color: var(--sub);
-  border: 1px solid transparent;
-  border-bottom: 2px solid transparent;
-  font-size: 13px;
-  font-weight: 550;
-  border-radius: 8px 8px 0 0;
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-  background: transparent;
-  cursor: pointer;
-  margin-bottom: -2px;
-}
-
-.tab-pill[aria-pressed="true"] {
-  border-bottom-color: var(--gold);
-  color: var(--ink);
-  font-weight: 650;
-  background: linear-gradient(180deg, rgba(201, 168, 76, 0.13) 0%, rgba(201, 168, 76, 0.03) 100%);
-  border-top: 1px solid rgba(201, 168, 76, 0.28);
-  border-left: 1px solid rgba(201, 168, 76, 0.18);
-  border-right: 1px solid rgba(201, 168, 76, 0.18);
-  box-shadow: 0 2px 6px rgba(201, 168, 76, 0.08);
-}
-
-.tab-pill:hover:not([aria-pressed="true"]) {
-  background: var(--surface-2);
-  color: var(--ink);
-}
+/* Hide pill strip — not used, causes overflow */
+.tab-pills { display: none; }
+.tab-pill  { display: none; }
 
 
 /* Month Hero Section - Sleek Charcoal + Gold Card */
