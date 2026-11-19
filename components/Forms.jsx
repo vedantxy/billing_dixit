@@ -386,23 +386,9 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
     return items;
   }, [book]);
 
-  // Pre-select first product by default so form is NEVER blank or invalid!
+  // Start with clean empty lines array — user clicks ANY product to select 1 time!
   const [lines, setLines] = useState(() => {
-    if (modal.subscriptionId) return [];
-    if (productCatalog.length > 0) {
-      const first = productCatalog[0];
-      return [
-        {
-          key: crypto.randomUUID(),
-          planId: first.id,
-          description: first.title,
-          quantity: "1",
-          price: String(first.price / 100),
-          hsnCode: first.hsn,
-        },
-      ];
-    }
-    return [blankLine()];
+    return [];
   });
 
   const [discount, setDiscount] = useState("0"),
@@ -461,15 +447,12 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
     };
   }, [client, issued]);
 
-  // 1-Click Direct Select Product (adds or increments count directly!)
+  // 1-Click Direct Select Product (adds 1 time or toggles off if clicked again)
   function selectProduct(prod) {
     const existingIndex = lines.findIndex((l) => l.planId === prod.id || l.description === prod.title);
     if (existingIndex >= 0) {
-      setLines((curr) =>
-        curr.map((l, i) =>
-          i === existingIndex ? { ...l, quantity: String(Number(l.quantity || 1) + 1) } : l
-        )
-      );
+      // Toggle off / remove so it is never duplicated
+      setLines((curr) => curr.filter((_, i) => i !== existingIndex));
     } else {
       const newLine = {
         key: crypto.randomUUID(),
@@ -486,18 +469,40 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
     }
   }
 
-  // 1-Click Direct Select Factory Sale
+  // Explicit quantity step on product card (+ / -)
+  function stepProductQty(prod, delta, e) {
+    if (e) e.stopPropagation();
+    const existingIndex = lines.findIndex((l) => l.planId === prod.id || l.description === prod.title);
+    if (existingIndex >= 0) {
+      const currentQty = Number(lines[existingIndex].quantity || 1);
+      const nextQty = currentQty + delta;
+      if (nextQty <= 0) {
+        setLines((curr) => curr.filter((_, i) => i !== existingIndex));
+      } else {
+        setLines((curr) =>
+          curr.map((l, i) =>
+            i === existingIndex ? { ...l, quantity: String(nextQty) } : l
+          )
+        );
+      }
+    } else if (delta > 0) {
+      selectProduct(prod);
+    }
+  }
+
+  // 1-Click Direct Select Factory Sale (toggles on/off, single item only)
   function selectSaleRecord(rec) {
     const title = rec.reference
       ? `${rec.reference} · ${rec.category || "Factory jobwork"}`
       : `${rec.category || "Factory delivery"} (${rec.day})`;
     const existingIndex = lines.findIndex((l) => l.saleId === rec.id || l.description === title);
     if (existingIndex >= 0) {
-      setLines((curr) =>
-        curr.map((l, i) =>
-          i === existingIndex ? { ...l, quantity: String(Number(l.quantity || 1) + 1) } : l
-        )
-      );
+      // Toggle off
+      setLines((curr) => curr.filter((_, i) => i !== existingIndex));
+      setWorkshop((prev) => ({
+        ...prev,
+        items: prev.items.filter((x) => x.id !== rec.id),
+      }));
     } else {
       const newLine = {
         key: crypto.randomUUID(),
@@ -571,20 +576,23 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
     );
 
   const payload = lines
-    .filter((l) => !hasSource || l.description || l.price || l.planId)
+    .filter((l) => l.description || l.price || l.planId || l.saleId)
     .map((l) => ({
       description: l.description,
       quantity: Number(l.quantity || 1),
       unitPrice: cents(l.price || 0),
       ...(l.planId ? { planId: l.planId } : {}),
       ...(l.hsnCode ? { hsnCode: l.hsnCode } : {}),
+      ...(l.saleId ? { saleId: l.saleId } : {}),
     }));
 
   const totals = invoiceTotals(
     [
       ...(sub ? [{ quantity: 1, unitPrice: sub.price }] : []),
       ...payload,
-      ...workshop.items.map((x) => ({ quantity: 1, unitPrice: x.amount })),
+      ...workshop.items
+        .filter((x) => !lines.some((l) => l.saleId === x.id))
+        .map((x) => ({ quantity: 1, unitPrice: x.amount })),
     ],
     cents(discount),
     cents(tax),
@@ -698,7 +706,7 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
                 type="button"
                 className={"pqs-card" + (isSelected ? " selected" : "")}
                 onClick={() => selectProduct(prod)}
-                title="Click to add or count another"
+                title={isSelected ? "Selected (Click card to remove, or use +/- to adjust)" : "Click to select 1 item"}
               >
                 <div className="pqs-card-info">
                   <strong>{prod.title}</strong>
@@ -706,12 +714,28 @@ export function InvoiceForm({ modal, book, today, save, busy, close, open }) {
                 </div>
                 <div className="pqs-card-badge">
                   {isSelected ? (
-                    <span className="qty-badge">
-                      <Check size={12} /> Count: {selectedQty} <b>+</b>
+                    <span className="qty-badge" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        aria-label="Decrease quantity"
+                        style={{ border: "none", background: "none", cursor: "pointer", padding: "0 5px", fontWeight: "bold", fontSize: "14px", color: "inherit" }}
+                        onClick={(e) => stepProductQty(prod, -1, e)}
+                      >
+                        −
+                      </button>
+                      <span style={{ fontWeight: 600 }}>Qty: {selectedQty}</span>
+                      <button
+                        type="button"
+                        aria-label="Increase quantity"
+                        style={{ border: "none", background: "none", cursor: "pointer", padding: "0 5px", fontWeight: "bold", fontSize: "14px", color: "inherit" }}
+                        onClick={(e) => stepProductQty(prod, 1, e)}
+                      >
+                        +
+                      </button>
                     </span>
                   ) : (
                     <span className="add-badge">
-                      <Plus size={13} /> Add
+                      <Plus size={13} /> Select
                     </span>
                   )}
                 </div>

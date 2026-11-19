@@ -146,3 +146,18 @@ test("validation rejects invalid dates, rates, disabled products and duplicate e
     /enabled/,
   );
 });
+test("invoice lines deduplicate duplicate entries and display each item once", () => {
+  const f = fixture();
+  const inv = f.bill({
+    lines: [
+      { description: "Full Saree Embroidery", quantity: 1, unitPrice: 25000 },
+      { description: "Full Saree Embroidery", quantity: 1, unitPrice: 25000 },
+      { description: "Jobwork · Challan #101 · 100 pcs", quantity: 100, unitPrice: 2500 },
+      { description: "Challan #101 · Factory jobwork", quantity: 1, unitPrice: 250000 },
+    ],
+  });
+  const details = invoiceDetails(f.tx.book, inv, today);
+  assert.equal(details.lines.length, 2);
+  assert.equal(details.lines[0].description, "Full Saree Embroidery");
+  assert.equal(details.lines[1].description, "Jobwork · Challan #101 · 100 pcs");
+});

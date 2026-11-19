@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import {
   cadences,
+  deduplicateLines,
   invoiceNumber,
   methods,
   money,
@@ -379,6 +380,7 @@ function SubscriptionDetail({ modal, book, stats, today, open, save, busy }) {
 }
 function InvoiceDetail({ modal, stats, open, save, busy }) {
   const i = stats.invoices.find((x) => x.id === modal.id);
+  const displayLines = deduplicateLines(i?.lines || []);
   return (
     <>
       <div className="detail-lead">
@@ -407,8 +409,8 @@ function InvoiceDetail({ modal, stats, open, save, busy }) {
             </tr>
           </thead>
           <tbody>
-            {i.lines.map((l) => (
-              <tr key={l.id}>
+            {displayLines.map((l, idx) => (
+              <tr key={l.id || idx}>
                 <td>{l.description}</td>
                 <td>{l.quantity}</td>
                 <td>{money(l.unitPrice)}</td>

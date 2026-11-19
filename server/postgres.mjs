@@ -108,13 +108,38 @@ export const postgres = {
         : { ids: [], lines: [] };
       if (isInvoice && source.lines.length) {
         ensure(Array.isArray(command.data.lines), "Enter valid invoice lines.");
-        command = {
-          ...command,
-          data: {
-            ...command.data,
-            lines: [...command.data.lines, ...source.lines],
-          },
-        };
+        const existingLines = command.data.lines;
+        if (!existingLines.length) {
+          command = {
+            ...command,
+            data: {
+              ...command.data,
+              lines: source.lines,
+            },
+          };
+        } else {
+          // Avoid duplicating lines if already included in command.data.lines
+          const unrepresented = source.lines.filter((sl) => {
+            const slDesc = (sl.description || "").trim().toLowerCase();
+            return !existingLines.some((el) => {
+              const elDesc = (el.description || "").trim().toLowerCase();
+              return (
+                (el.saleId && sl.id && el.saleId === sl.id) ||
+                (elDesc && slDesc && (elDesc === slDesc || elDesc.includes(slDesc) || slDesc.includes(elDesc))) ||
+                (el.unitPrice === sl.unitPrice && el.quantity === sl.quantity)
+              );
+            });
+          });
+          if (unrepresented.length > 0) {
+            command = {
+              ...command,
+              data: {
+                ...command.data,
+                lines: [...existingLines, ...unrepresented],
+              },
+            };
+          }
+        }
       }
       let result;
       if (

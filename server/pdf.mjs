@@ -1,7 +1,7 @@
 import "regenerator-runtime/runtime.js";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import { invoiceNumber, money, niceDate, statuses } from "../lib/billing.mjs";
+import { deduplicateLines, invoiceNumber, money, niceDate, statuses } from "../lib/billing.mjs";
 
 const ink = rgb(0.067, 0.094, 0.153);       // #111827 dark
 const muted = rgb(0.42, 0.45, 0.50);          // gray muted
@@ -245,7 +245,8 @@ async function documentPdf(inv, statement, loadFont) {
       y -= 20;
     }
     tableHead();
-    for (const row of inv.lines) {
+    const displayLines = deduplicateLines(inv.lines);
+    for (const row of displayLines) {
       const lines = wrap(row.description, 266);
       if (y - lines.length * 15 < 80) {
         freshPage();
